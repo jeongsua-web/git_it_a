@@ -1,0 +1,59 @@
+void main() {
+  int size = 10;
+
+  printSharp(size);
+  printSharp2(size);
+  printSharp3(size);
+}
+
+// #정사각형
+void printSharp(int size) {
+  for (int y = 0; y <= size; y++) {
+    String line = "";
+    for (int x = 0; x <= size; x++) {
+      line += "#";
+    }
+    print(line);
+  }
+}
+
+// #X자
+void printSharp2(int size) {
+  for (int y = 0; y <= size; y++) {
+    String line = "";
+    for (int x = 0; x <= size; x++) {
+      if (x == y || x + y == size) {
+        line += "#";
+      } else {
+        line += ".";
+      }
+    }
+    print(line);
+  }
+}
+
+// #테두리 X자
+void printSharp3(int size) {
+  for (int y = 0; y <= size; y++) {
+    String line = "";
+
+    // 첫째줄, 마지막줄에 한 줄 꽉 채움
+    if (y == 0 || y == size) {
+      for (int i = 0; i <= size; i++) {
+        line += "#";
+      }
+      print(line);
+      continue; // 다음 줄로 넘어감
+    } else {
+      // 중간 줄은 X자
+      for (int x = 0; x <= size; x++) {
+        if (x == y || x + y == size) {
+          line += "#";
+        } else {
+          line += ".";
+        }
+      }
+      print(line);
+    }
+  }
+}
