@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "406227555732",
+    "project_id": "carrot-market-cloneapp",
+    "storage_bucket": "carrot-market-cloneapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:406227555732:android:d5a9eac3e66f8a69baab81",
+        "android_client_info": {
+          "package_name": "com.sua.cloneapp.carrot_market_clone_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAhFvIXTzs9uA6WrFjS-NWgalUIAAPLtWQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
