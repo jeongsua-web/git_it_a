@@ -1,0 +1,113 @@
+import 'package:get/get.dart';
+
+class ProductWriteController extends GetxController {
+  // 선택된 이미지 리스트
+  final RxList<String> selectedImages = <String>[].obs;
+
+  // 제목
+  final RxString title = ''.obs;
+
+  // 선택된 카테고리
+  final RxString selectedCategory = ''.obs;
+
+  // 가격
+  final RxString price = ''.obs;
+
+  // 나눔하기 여부
+  final RxBool isShare = false.obs;
+
+  // 상품 설명
+  final RxString description = ''.obs;
+
+  // 거래 장소
+  final RxString location = '화곡동'.obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    // 초기화 로직
+  }
+
+  // 이미지 추가
+  void addImage(String imagePath) {
+    if (selectedImages.length < 10) {
+      selectedImages.add(imagePath);
+    }
+  }
+
+  // 이미지 삭제
+  void removeImage(int index) {
+    if (index >= 0 && index < selectedImages.length) {
+      selectedImages.removeAt(index);
+    }
+  }
+
+  // 제목 업데이트
+  void updateTitle(String value) {
+    title.value = value;
+  }
+
+  // 카테고리 선택
+  void selectCategory(String category) {
+    selectedCategory.value = category;
+  }
+
+  // 가격 업데이트
+  void updatePrice(String value) {
+    price.value = value;
+  }
+
+  // 나눔하기 토글
+  void toggleShare(bool value) {
+    isShare.value = value;
+    if (value) {
+      price.value = ''; // 나눔하기 선택 시 가격 초기화
+    }
+  }
+
+  // 설명 업데이트
+  void updateDescription(String value) {
+    description.value = value;
+  }
+
+  // 장소 업데이트
+  void updateLocation(String value) {
+    location.value = value;
+  }
+
+  // 폼 유효성 검사
+  bool validateForm() {
+    if (selectedImages.isEmpty) {
+      Get.snackbar('알림', '최소 1개 이상의 이미지를 선택해주세요.');
+      return false;
+    }
+    if (title.value.trim().isEmpty) {
+      Get.snackbar('알림', '제목을 입력해주세요.');
+      return false;
+    }
+    if (selectedCategory.value.isEmpty) {
+      Get.snackbar('알림', '카테고리를 선택해주세요.');
+      return false;
+    }
+    if (!isShare.value && price.value.trim().isEmpty) {
+      Get.snackbar('알림', '가격을 입력하거나 나눔하기를 선택해주세요.');
+      return false;
+    }
+    return true;
+  }
+
+  // 상품 등록
+  Future<void> submitProduct() async {
+    if (!validateForm()) {
+      return;
+    }
+
+    try {
+      // TODO: Repository를 통해 상품 등록 API 호출
+      Get.snackbar('성공', '상품이 등록되었습니다.');
+      Get.back(); // 이전 화면으로 돌아가기
+    } catch (e) {
+      Get.snackbar('오류', '상품 등록에 실패했습니다.');
+    }
+  }
+}
