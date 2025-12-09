@@ -39,6 +39,8 @@ class _MultipleImageViewState extends State<MultipleImageView> {
     // 권한 요청
     final PermissionState permission = await PhotoManager.requestPermissionExtend();
     
+    print('권한 상태: ${permission.isAuth}, hasAccess: ${permission.hasAccess}');
+    
     if (permission.isAuth) {
       // 권한 허가됨 - 사진첩 로드
       await _loadPhotos();
@@ -47,6 +49,7 @@ class _MultipleImageViewState extends State<MultipleImageView> {
       await _loadPhotos();
     } else {
       // 권한 거부됨
+      print('권한 거부됨');
       _showPermissionDeniedDialog();
     }
   }
@@ -64,9 +67,13 @@ class _MultipleImageViewState extends State<MultipleImageView> {
         hasAll: true,
       );
 
+      print('앨범 개수: ${albums.length}');
+
       if (albums.isNotEmpty) {
         _albums = albums;
         _currentAlbum = albums.first; // 최근 항목 앨범
+
+        print('선택된 앨범: ${_currentAlbum!.name}, 개수: ${await _currentAlbum!.assetCountAsync}');
 
         // 첫 번째 앨범의 사진들 가져오기
         final List<AssetEntity> assets = await _currentAlbum!.getAssetListPaged(
@@ -74,21 +81,49 @@ class _MultipleImageViewState extends State<MultipleImageView> {
           size: 100,
         );
 
+        print('로드된 사진 개수: ${assets.length}');
+
         setState(() {
           _assets = assets;
           _isLoading = false;
           _showPhotoPicker = true; // 사진 선택 화면 표시
         });
+        
+        if (assets.isEmpty) {
+          // 사진이 없을 때 메시지 표시
+          Get.snackbar(
+            '알림',
+            '갤러리에 사진이 없습니다.\n사진을 추가한 후 다시 시도해주세요.',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: const Color(0xff2c2c2e),
+            colorText: Colors.white,
+          );
+        }
       } else {
+        print('앨범이 없음');
         setState(() {
           _isLoading = false;
         });
+        Get.snackbar(
+          '알림',
+          '사진 앨범을 찾을 수 없습니다.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xff2c2c2e),
+          colorText: Colors.white,
+        );
       }
     } catch (e) {
       print('사진첩 로드 실패: $e');
       setState(() {
         _isLoading = false;
       });
+      Get.snackbar(
+        '오류',
+        '사진을 불러오는데 실패했습니다: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xff2c2c2e),
+        colorText: Colors.white,
+      );
     }
   }
 

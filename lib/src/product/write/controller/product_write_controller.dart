@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class ProductWriteController extends GetxController {
@@ -6,18 +7,21 @@ class ProductWriteController extends GetxController {
 
   // 제목
   final RxString title = ''.obs;
+  final TextEditingController titleController = TextEditingController();
 
   // 선택된 카테고리
   final RxString selectedCategory = ''.obs;
 
   // 가격
   final RxString price = ''.obs;
+  final TextEditingController priceController = TextEditingController();
 
   // 나눔하기 여부
   final RxBool isShare = false.obs;
 
   // 상품 설명
   final RxString description = ''.obs;
+  final TextEditingController descriptionController = TextEditingController();
 
   // 거래 장소
   final RxString location = '화곡동'.obs;
@@ -26,6 +30,14 @@ class ProductWriteController extends GetxController {
   void onInit() {
     super.onInit();
     // 초기화 로직
+  }
+
+  @override
+  void onClose() {
+    titleController.dispose();
+    priceController.dispose();
+    descriptionController.dispose();
+    super.onClose();
   }
 
   // 이미지 추가
@@ -54,14 +66,25 @@ class ProductWriteController extends GetxController {
 
   // 가격 업데이트
   void updatePrice(String value) {
-    price.value = value;
+    // 숫자만 입력 가능하도록 필터링
+    final numericValue = value.replaceAll(RegExp(r'[^0-9]'), '');
+    price.value = numericValue;
+    priceController.text = numericValue;
+    priceController.selection = TextSelection.fromPosition(
+      TextPosition(offset: numericValue.length),
+    );
   }
 
   // 나눔하기 토글
   void toggleShare(bool value) {
     isShare.value = value;
     if (value) {
-      price.value = ''; // 나눔하기 선택 시 가격 초기화
+      price.value = '0'; // 나눔하기 선택 시 가격 0원으로 설정
+      priceController.text = '0';
+    } else {
+      // 나눔하기 해제 시 가격 초기화
+      price.value = '';
+      priceController.text = '';
     }
   }
 

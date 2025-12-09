@@ -247,6 +247,7 @@ class _TitleInput extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       child: CustomTextField(
+        controller: controller.titleController,
         hintText: '글 제목',
         maxLines: 1,
         onChanged: (value) => controller.updateTitle(value),
@@ -261,12 +262,7 @@ class _CategorySelect extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<ProductWriteController>();
-    
-    return Obx(() => ProductCategorySelector(
-      selectedCategory: controller.selectedCategory.value,
-      onCategorySelected: (category) => controller.selectCategory(category),
-    ));
+    return const ProductCategorySelector();
   }
 }
 
@@ -285,6 +281,7 @@ class _PriceAndShareRow extends StatelessWidget {
           // 가격 입력 (서쪽)
           Expanded(
             child: Obx(() => CustomTextField(
+              controller: controller.priceController,
               hintText: '₩ 가격 (선택사항)',
               keyboardType: TextInputType.number,
               maxLines: 1,

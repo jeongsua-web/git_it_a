@@ -1,39 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../product/write/controller/product_write_controller.dart';
+import '../enum/market_enum.dart';
 
-class ProductCategorySelector extends StatelessWidget {
-  final String selectedCategory;
-  final Function(String) onCategorySelected;
+class ProductCategorySelector extends GetView<ProductWriteController> {
+  const ProductCategorySelector({super.key});
 
-  const ProductCategorySelector({
-    super.key,
-    required this.selectedCategory,
-    required this.onCategorySelected,
-  });
-
-  // 카테고리 목록
-  static const List<Map<String, dynamic>> categories = [
-    {'name': '디지털기기', 'icon': Icons.phone_android},
-    {'name': '생활가전', 'icon': Icons.tv},
-    {'name': '가구/인테리어', 'icon': Icons.chair},
-    {'name': '생활/주방', 'icon': Icons.kitchen},
-    {'name': '유아동', 'icon': Icons.child_care},
-    {'name': '유아도서', 'icon': Icons.book},
-    {'name': '여성의류', 'icon': Icons.checkroom},
-    {'name': '남성의류', 'icon': Icons.shopping_bag},
-    {'name': '여성잡화', 'icon': Icons.watch},
-    {'name': '남성잡화', 'icon': Icons.backpack},
-    {'name': '뷰티/미용', 'icon': Icons.face},
-    {'name': '스포츠/레저', 'icon': Icons.sports_soccer},
-    {'name': '취미/게임/음반', 'icon': Icons.videogame_asset},
-    {'name': '도서', 'icon': Icons.menu_book},
-    {'name': '티켓/교환권', 'icon': Icons.confirmation_number},
-    {'name': '가공식품', 'icon': Icons.fastfood},
-    {'name': '반려동물용품', 'icon': Icons.pets},
-    {'name': '식물', 'icon': Icons.local_florist},
-    {'name': '기타 중고물품', 'icon': Icons.category},
-    {'name': '삽니다', 'icon': Icons.shopping_cart},
-  ];
+  // 카테고리 목록 (enum 기반)
+  static const Map<ProductCategoryType, IconData> categoryIcons = {
+    ProductCategoryType.digital: Icons.phone_android,
+    ProductCategoryType.householdAppliances: Icons.tv,
+    ProductCategoryType.furniture: Icons.chair,
+    ProductCategoryType.life: Icons.kitchen,
+    ProductCategoryType.children: Icons.child_care,
+    ProductCategoryType.childrenBooks: Icons.book,
+    ProductCategoryType.womenClothing: Icons.checkroom,
+    ProductCategoryType.womenAccessories: Icons.watch,
+    ProductCategoryType.menFashion: Icons.shopping_bag,
+    ProductCategoryType.beauty: Icons.face,
+    ProductCategoryType.sports: Icons.sports_soccer,
+    ProductCategoryType.hobby: Icons.videogame_asset,
+    ProductCategoryType.books: Icons.menu_book,
+    ProductCategoryType.ticket: Icons.confirmation_number,
+    ProductCategoryType.processedFood: Icons.fastfood,
+    ProductCategoryType.petSupplies: Icons.pets,
+  };
 
   void _showCategoryBottomSheet(BuildContext context) {
     showModalBottomSheet(
@@ -72,46 +63,52 @@ class ProductCategorySelector extends StatelessWidget {
               const Divider(color: Colors.white10, thickness: 1),
               // 카테고리 리스트
               Flexible(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: categories.length,
-                  itemBuilder: (context, index) {
-                    final category = categories[index];
-                    final isSelected = selectedCategory == category['name'];
-                    
-                    return ListTile(
-                      leading: Icon(
-                        category['icon'] as IconData,
-                        color: isSelected 
-                            ? const Color(0xffed7738)
-                            : Colors.white.withOpacity(0.6),
-                        size: 24,
-                      ),
-                      title: Text(
-                        category['name'] as String,
-                        style: TextStyle(
+                child: Obx(() {
+                  // GetX 오류 방지: .value를 한 번만 추출
+                  final selectedCategoryValue = controller.selectedCategory.value;
+                  
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: categoryIcons.length,
+                    itemBuilder: (context, index) {
+                      final category = categoryIcons.keys.elementAt(index);
+                      final icon = categoryIcons[category]!;
+                      final isSelected = selectedCategoryValue == category.label;
+                      
+                      return ListTile(
+                        leading: Icon(
+                          icon,
                           color: isSelected 
                               ? const Color(0xffed7738)
-                              : Colors.white,
-                          fontSize: 16,
-                          fontWeight: isSelected 
-                              ? FontWeight.bold 
-                              : FontWeight.normal,
+                              : Colors.white.withOpacity(0.6),
+                          size: 24,
                         ),
-                      ),
-                      trailing: isSelected
-                          ? const Icon(
-                              Icons.check,
-                              color: Color(0xffed7738),
-                            )
-                          : null,
-                      onTap: () {
-                        onCategorySelected(category['name'] as String);
-                        Navigator.pop(context);
-                      },
-                    );
-                  },
-                ),
+                        title: Text(
+                          category.label,
+                          style: TextStyle(
+                            color: isSelected 
+                                ? const Color(0xffed7738)
+                                : Colors.white,
+                            fontSize: 16,
+                            fontWeight: isSelected 
+                                ? FontWeight.bold 
+                                : FontWeight.normal,
+                          ),
+                        ),
+                        trailing: isSelected
+                            ? const Icon(
+                                Icons.check,
+                                color: Color(0xffed7738),
+                              )
+                            : null,
+                        onTap: () {
+                          controller.selectCategory(category.label);
+                          Navigator.pop(context);
+                        },
+                      );
+                    },
+                  );
+                }),
               ),
             ],
           ),
@@ -129,15 +126,18 @@ class ProductCategorySelector extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              selectedCategory.isEmpty ? '카테고리 선택' : selectedCategory,
-              style: TextStyle(
-                color: selectedCategory.isEmpty
-                    ? Colors.white.withOpacity(0.4)
-                    : Colors.white,
-                fontSize: 16,
-              ),
-            ),
+            Obx(() {
+              final category = controller.selectedCategory.value;
+              return Text(
+                category.isEmpty ? '카테고리 선택' : category,
+                style: TextStyle(
+                  color: category.isEmpty
+                      ? Colors.white.withOpacity(0.4)
+                      : Colors.white,
+                  fontSize: 16,
+                ),
+              );
+            }),
             Icon(
               Icons.arrow_forward_ios,
               color: Colors.white.withOpacity(0.4),

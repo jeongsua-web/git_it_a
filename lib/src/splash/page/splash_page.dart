@@ -129,10 +129,14 @@ class _SplashView extends StatelessWidget {
                   color: Colors.white10,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Icon(
-                  Icons.shopping_bag,
-                  size: 60,
-                  color: Color(0xffed7738),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Image.asset(
+                    'assets/images/logo_simbol.png',
+                    width: 100,
+                    height: 100,
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
               const SizedBox(height: 40),
