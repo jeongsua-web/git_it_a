@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:photo_manager/photo_manager.dart';
+import 'package:get/get.dart';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -18,16 +19,19 @@ class MultipleImageView extends StatefulWidget {
 }
 
 class _MultipleImageViewState extends State<MultipleImageView> {
-  late List<String> _selectedImages;
+  final RxList<String> _selectedImages = <String>[].obs;
   List<AssetEntity> _assets = [];
   List<AssetPathEntity> _albums = [];
   AssetPathEntity? _currentAlbum;
   bool _isLoading = false;
+  bool _showPhotoPicker = false; // 사진 선택 화면 표시 여부
 
   @override
   void initState() {
     super.initState();
-    _selectedImages = List.from(widget.selectedImages);
+    _selectedImages.value = List.from(widget.selectedImages);
+    // 페이지 열릴 때 바로 사진첩 로드
+    _requestPermissionAndLoadPhotos();
   }
 
   // 권한 요청 및 사진첩 접근
@@ -73,10 +77,8 @@ class _MultipleImageViewState extends State<MultipleImageView> {
         setState(() {
           _assets = assets;
           _isLoading = false;
+          _showPhotoPicker = true; // 사진 선택 화면 표시
         });
-
-        // 사진 선택 화면으로 이동
-        _showPhotoPickerBottomSheet();
       } else {
         setState(() {
           _isLoading = false;
@@ -124,86 +126,103 @@ class _MultipleImageViewState extends State<MultipleImageView> {
     );
   }
 
-  // 사진 선택 바텀시트
-  void _showPhotoPickerBottomSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: const Color(0xff212123),
-      builder: (context) {
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.8,
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              // 헤더
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    '사진 선택',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              // 사진 그리드
-              Expanded(
-                child: GridView.builder(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    crossAxisSpacing: 4,
-                    mainAxisSpacing: 4,
-                  ),
-                  itemCount: _assets.length,
-                  itemBuilder: (context, index) {
-                    final asset = _assets[index];
-                    return GestureDetector(
-                      onTap: () async {
-                        if (_selectedImages.length < widget.maxImages) {
-                          // 이미지 파일 경로 가져오기
-                          final file = await asset.file;
-                          if (file != null) {
-                            setState(() {
-                              _selectedImages.add(file.path);
-                            });
-                            Navigator.pop(context);
-                          }
-                        }
-                      },
-                      child: FutureBuilder<Uint8List?>(
-                        future: asset.thumbnailDataWithSize(const ThumbnailSize.square(200)),
-                        builder: (context, snapshot) {
-                          if (snapshot.hasData && snapshot.data != null) {
-                            return Image.memory(
-                              snapshot.data!,
-                              fit: BoxFit.cover,
-                            );
-                          }
-                          return Container(
-                            color: Colors.grey[800],
-                            child: const Center(
-                              child: CircularProgressIndicator(),
-                            ),
-                          );
-                        },
-                      ),
-                    );
-                  },
+  // 사진 선택 화면 닫기
+  void _closePhotoPicker() {
+    setState(() {
+      _showPhotoPicker = false;
+      _assets = [];
+    });
+  }
+
+  // 사진 선택
+  Future<void> _selectPhoto(AssetEntity asset) async {
+    if (_selectedImages.length < widget.maxImages) {
+      final file = await asset.file;
+      if (file != null) {
+        setState(() {
+          _selectedImages.add(file.path);
+          _showPhotoPicker = false; // 선택 후 사진 선택 화면 닫기
+          _assets = [];
+        });
+      }
+    }
+  }
+
+  // 사진 선택 그리드 위젯
+  Widget _buildPhotoPickerGrid() {
+    return Container(
+      color: const Color(0xff212123),
+      child: Column(
+        children: [
+          // 헤더
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: Colors.white.withOpacity(0.1),
+                  width: 1,
                 ),
               ),
-            ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  '사진 선택',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: _closePhotoPicker,
+                ),
+              ],
+            ),
           ),
-        );
-      },
+          // 사진 그리드
+          Expanded(
+            child: GridView.builder(
+              padding: const EdgeInsets.all(4),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 4,
+                mainAxisSpacing: 4,
+              ),
+              itemCount: _assets.length,
+              itemBuilder: (context, index) {
+                final asset = _assets[index];
+                return GestureDetector(
+                  onTap: () => _selectPhoto(asset),
+                  child: FutureBuilder<Uint8List?>(
+                    future: asset.thumbnailDataWithSize(const ThumbnailSize.square(200)),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData && snapshot.data != null) {
+                        return Image.memory(
+                          snapshot.data!,
+                          fit: BoxFit.cover,
+                        );
+                      }
+                      return Container(
+                        color: Colors.grey[800],
+                        child: const Center(
+                          child: CircularProgressIndicator(
+                            color: Color(0xffed7738),
+                            strokeWidth: 2,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -215,24 +234,24 @@ class _MultipleImageViewState extends State<MultipleImageView> {
 
   // 이미지 삭제
   void _removeImage(int index) {
-    setState(() {
+    if (index >= 0 && index < _selectedImages.length) {
       _selectedImages.removeAt(index);
-    });
+    }
   }
 
   // 완료 버튼 - 선택된 이미지 리스트 반환
   void _onComplete() {
-    Navigator.pop(context, _selectedImages);
+    Get.back(result: _selectedImages.toList());
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
+        title: Obx(() => Text(
           '사진 선택 (${_selectedImages.length}/${widget.maxImages})',
           style: const TextStyle(color: Colors.white, fontSize: 18),
-        ),
+        )),
         backgroundColor: const Color(0xff212123),
         leading: IconButton(
           icon: const Icon(Icons.close, color: Colors.white),
@@ -241,7 +260,7 @@ class _MultipleImageViewState extends State<MultipleImageView> {
           },
         ),
         actions: [
-          TextButton(
+          Obx(() => TextButton(
             onPressed: _selectedImages.isEmpty ? null : _onComplete,
             child: Text(
               '완료',
@@ -253,27 +272,37 @@ class _MultipleImageViewState extends State<MultipleImageView> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-          ),
+          )),
         ],
       ),
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(
-                color: Color(0xffed7738),
+      body: Stack(
+        children: [
+          // 기본 화면 (선택된 이미지 목록)
+          Obx(() => Column(
+            children: [
+              // 선택된 이미지 그리드
+              Expanded(
+                child: _isLoading
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          color: Color(0xffed7738),
+                        ),
+                      )
+                    : _selectedImages.isEmpty
+                        ? _buildEmptyState()
+                        : _buildImageGrid(),
               ),
-            )
-          : Column(
-              children: [
-                // 선택된 이미지 그리드
-                Expanded(
-                  child: _selectedImages.isEmpty
-                      ? _buildEmptyState()
-                      : _buildImageGrid(),
-                ),
-                // 하단 버튼 영역
-                _buildBottomButtons(),
-              ],
+              // 하단 버튼 영역
+              _buildBottomButtons(),
+            ],
+          )),
+          // 사진 선택 화면 (스택으로 오버레이)
+          if (_showPhotoPicker)
+            Positioned.fill(
+              child: _buildPhotoPickerGrid(),
             ),
+        ],
+      ),
     );
   }
 

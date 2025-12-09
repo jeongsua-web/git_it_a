@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'dart:io';
 import '../../../common/components/checkbox.dart';
 import '../../../common/components/text_field.dart';
+import '../../../common/components/multiple_image_view.dart';
+import '../../../common/components/product_category_selector.dart';
+import '../controller/product_write_controller.dart';
 
-class ProductWritePage extends StatelessWidget {
+class ProductWritePage extends GetView<ProductWriteController> {
   const ProductWritePage({super.key});
 
   @override
@@ -101,11 +106,21 @@ class _ImageSection extends StatelessWidget {
   const _ImageSection();
 
   // 이미지 선택 아이콘 버튼
-  Widget _photoSelectIcon(int selectedCount) {
+  Widget _photoSelectIcon(BuildContext context, int selectedCount) {
+    final controller = Get.find<ProductWriteController>();
+    
     return GestureDetector(
-      onTap: () {
-        // 이미지 선택 동작
-        print('이미지 선택');
+      onTap: () async {
+        // MultipleImageView 페이지로 이동
+        final result = await Get.to(() => MultipleImageView(
+          selectedImages: controller.selectedImages.toList(),
+          maxImages: 10,
+        ));
+        
+        // 선택된 이미지 업데이트
+        if (result != null && result is List<String>) {
+          controller.selectedImages.value = result;
+        }
       },
       child: Container(
         width: 88,
@@ -149,27 +164,19 @@ class _ImageSection extends StatelessWidget {
               // 이미지
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  images[index],
-                  width: 88,
-                  height: 88,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      width: 88,
-                      height: 88,
-                      decoration: BoxDecoration(
-                        color: Colors.white10,
-                        borderRadius: BorderRadius.circular(8),
+                child: images[index].startsWith('http')
+                    ? Image.network(
+                        images[index],
+                        width: 88,
+                        height: 88,
+                        fit: BoxFit.cover,
+                      )
+                    : Image.file(
+                        File(images[index]),
+                        width: 88,
+                        height: 88,
+                        fit: BoxFit.cover,
                       ),
-                      child: const Icon(
-                        Icons.image,
-                        color: Colors.white30,
-                        size: 40,
-                      ),
-                    );
-                  },
-                ),
               ),
               // 삭제 버튼 (우상단)
               Positioned(
@@ -177,7 +184,8 @@ class _ImageSection extends StatelessWidget {
                 right: 4,
                 child: GestureDetector(
                   onTap: () {
-                    print('이미지 삭제: $index');
+                    final controller = Get.find<ProductWriteController>();
+                    controller.removeImage(index);
                   },
                   child: Container(
                     width: 24,
@@ -203,12 +211,7 @@ class _ImageSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 임시로 선택된 이미지 개수 (나중에 컨트롤러에서 관리)
-    final List<String> selectedImages = [
-      'https://picsum.photos/200/200?random=1',
-      'https://picsum.photos/200/200?random=2',
-      'https://picsum.photos/200/200?random=3',
-    ];
+    final controller = Get.find<ProductWriteController>();
 
     return Container(
       height: 120,
@@ -216,10 +219,17 @@ class _ImageSection extends StatelessWidget {
       child: Row(
         children: [
           // 이미지 추가 버튼 (고정)
-          _photoSelectIcon(selectedImages.length),
+          Obx(() => _photoSelectIcon(context, controller.selectedImages.length)),
           const SizedBox(width: 12),
           // 이미지 리스트 영역 (스크롤 가능)
-          _selectedImageList(selectedImages),
+          Expanded(
+            child: Obx(() {
+              if (controller.selectedImages.isEmpty) {
+                return const SizedBox.shrink();
+              }
+              return _selectedImageList(controller.selectedImages.toList());
+            }),
+          ),
         ],
       ),
     );
@@ -232,11 +242,14 @@ class _TitleInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+    final controller = Get.find<ProductWriteController>();
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       child: CustomTextField(
         hintText: '글 제목',
         maxLines: 1,
+        onChanged: (value) => controller.updateTitle(value),
       ),
     );
   }
@@ -248,71 +261,44 @@ class _CategorySelect extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        // 카테고리 선택 바텀시트 열기
-        print('카테고리 선택');
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              '카테고리 선택',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.4),
-                fontSize: 16,
-              ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.white.withOpacity(0.4),
-              size: 16,
-            ),
-          ],
-        ),
-      ),
-    );
+    final controller = Get.find<ProductWriteController>();
+    
+    return Obx(() => ProductCategorySelector(
+      selectedCategory: controller.selectedCategory.value,
+      onCategorySelected: (category) => controller.selectCategory(category),
+    ));
   }
 }
 
 // 가격 입력 + 나눔하기 (같은 줄)
-class _PriceAndShareRow extends StatefulWidget {
+class _PriceAndShareRow extends StatelessWidget {
   const _PriceAndShareRow();
 
   @override
-  State<_PriceAndShareRow> createState() => _PriceAndShareRowState();
-}
-
-class _PriceAndShareRowState extends State<_PriceAndShareRow> {
-  bool _isShare = false;
-
-  @override
   Widget build(BuildContext context) {
+    final controller = Get.find<ProductWriteController>();
+    
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       child: Row(
         children: [
           // 가격 입력 (서쪽)
-          const Expanded(
-            child: CustomTextField(
+          Expanded(
+            child: Obx(() => CustomTextField(
               hintText: '₩ 가격 (선택사항)',
               keyboardType: TextInputType.number,
               maxLines: 1,
-            ),
+              enabled: !controller.isShare.value,
+              onChanged: (value) => controller.updatePrice(value),
+            )),
           ),
           const SizedBox(width: 16),
           // 나눔하기 체크박스 (동쪽)
-          CustomCheckbox(
-            value: _isShare,
-            onChanged: (value) {
-              setState(() {
-                _isShare = value;
-              });
-            },
+          Obx(() => CustomCheckbox(
+            value: controller.isShare.value,
+            onChanged: (value) => controller.toggleShare(value),
             label: '나눔하기',
-          ),
+          )),
         ],
       ),
     );
@@ -325,6 +311,8 @@ class _DescriptionInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<ProductWriteController>();
+    
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       child: Column(
@@ -339,10 +327,11 @@ class _DescriptionInput extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          const CustomTextField(
+          CustomTextField(
             hintText: '올릴 게시글 내용을 작성해주세요.\n(가품 및 판매금지품목은 게시가 제한될 수 있어요.)',
             maxLines: 10,
             minLines: 5,
+            onChanged: (value) => controller.updateDescription(value),
           ),
         ],
       ),
@@ -356,6 +345,8 @@ class _LocationInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<ProductWriteController>();
+    
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       child: Column(
@@ -372,27 +363,30 @@ class _LocationInput extends StatelessWidget {
           const SizedBox(height: 12),
           GestureDetector(
             onTap: () {
-              // 장소 선택 화면 열기
-              print('장소 선택');
+              // 위치 선택 기능
+              print('위치 선택');
             },
             child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(8),
+              ),
               child: Row(
                 children: [
-                  Expanded(
-                    child: Text(
-                      '화곡동',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
                   Icon(
-                    Icons.gps_fixed,
+                    Icons.location_on,
                     color: Colors.white.withOpacity(0.5),
                     size: 20,
                   ),
+                  const SizedBox(width: 8),
+                  Obx(() => Text(
+                    controller.location.value,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                    ),
+                  )),
                 ],
               ),
             ),
